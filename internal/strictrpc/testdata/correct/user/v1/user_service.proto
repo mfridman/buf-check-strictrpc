@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "user/v1/user.proto";
+
+// UserService is the service for managing users.
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+}
+
+message GetUserRequest {
+  oneof identifier {
+    string id = 1;
+    string username = 2;
+  }
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  // Optional. A website URL for the user.
+  string website_url = 3;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message CreateUserErrorDetails {
+  string message = 1;
+}

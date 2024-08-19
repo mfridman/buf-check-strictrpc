@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package multiple;
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+}
+
+service AdminService {
+  rpc ServerSettings(ServerSettingsRequest) returns (ServerSettingsResponse) {}
+}
+
+message GetUserRequest {}
+
+message GetUserResponse {}
+
+message ServerSettingsRequest {}
+
+message ServerSettingsResponse {}
