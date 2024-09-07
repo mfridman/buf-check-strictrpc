@@ -6,8 +6,5 @@ import (
 )
 
 func main() {
-	rules := []*check.RuleSpec{
-		strictrpc.Rule,
-	}
-	check.Main(&check.Spec{Rules: rules})
+	check.Main(strictrpc.Spec)
 }

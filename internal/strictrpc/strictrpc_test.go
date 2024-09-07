@@ -3,31 +3,25 @@ package strictrpc
 import (
 	"testing"
 
-	"github.com/bufbuild/bufplugin-go/check"
 	"github.com/bufbuild/bufplugin-go/check/checktest"
 )
-
-// TODO(mf): debugging is a bit of a pain, what is the annotation message, how can I print it, or view it?
 
 func TestRule(t *testing.T) {
 	t.Parallel()
 
 	t.Run("invalid", func(t *testing.T) {
-		checktest.TestCase{
-			Spec: &check.Spec{Rules: []*check.RuleSpec{Rule}},
+		checktest.CheckTest{
+			Spec: Spec,
 			Request: &checktest.RequestSpec{
 				Files: &checktest.ProtoFileSpec{
-					DirPaths: []string{
-						"testdata/multiple",
-					},
-					FilePaths: []string{
-						"many_services.proto",
-					},
+					DirPaths:  []string{"testdata/multiple"},
+					FilePaths: []string{"many_services.proto"},
 				},
 			},
 			ExpectedAnnotations: []checktest.ExpectedAnnotation{
 				{
-					RuleID: "STRICT_RPC",
+					RuleID:  "STRICT_RPC",
+					Message: "only one service definition allowed per file, but 2 were found",
 					Location: &checktest.ExpectedLocation{
 						FileName: "many_services.proto",
 					},
@@ -36,14 +30,37 @@ func TestRule(t *testing.T) {
 		}.Run(t)
 	})
 
-	t.Run("valid", func(t *testing.T) {
-		checktest.TestCase{
-			Spec: &check.Spec{Rules: []*check.RuleSpec{Rule}},
+	t.Run("streaming no allowed", func(t *testing.T) {
+		checktest.CheckTest{
+			Spec: Spec,
 			Request: &checktest.RequestSpec{
 				Files: &checktest.ProtoFileSpec{
-					DirPaths: []string{
-						"testdata/correct",
+					DirPaths:  []string{"testdata/streaming"},
+					FilePaths: []string{"a_service.proto"},
+				},
+			},
+			ExpectedAnnotations: []checktest.ExpectedAnnotation{
+				{
+					RuleID:  "STRICT_RPC",
+					Message: `method "GetMovie" is streaming, but streaming is not allowed`,
+					Location: &checktest.ExpectedLocation{
+						FileName:    "a_service.proto",
+						StartLine:   2,
+						EndLine:     4,
+						StartColumn: 0,
+						EndColumn:   1,
 					},
+				},
+			},
+		}.Run(t)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		checktest.CheckTest{
+			Spec: Spec,
+			Request: &checktest.RequestSpec{
+				Files: &checktest.ProtoFileSpec{
+					DirPaths: []string{"testdata/correct"},
 					FilePaths: []string{
 						"user/v1/user.proto",
 						"user/v1/user_service.proto",

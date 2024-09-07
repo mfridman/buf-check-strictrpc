@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+service StreamingService {
+  rpc GetMovie(GetMovieRequest) returns (stream GetMovieResponse) {}
+}
+
+message GetMovieRequest {}
+
+message GetMovieResponse {}
