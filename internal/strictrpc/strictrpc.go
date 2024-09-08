@@ -12,11 +12,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-const (
-	// TODO(mf): make allowStreaming a plugin option
-	streamingAllowed = false
-)
-
 var DEBUG = os.Getenv("DEBUG") != ""
 
 var Spec = &check.Spec{
@@ -52,17 +47,37 @@ func newResult(fd protoreflect.Descriptor, msg string, args ...any) *result {
 	}
 }
 
+type config struct {
+	disableStreaming bool
+}
+
+func newConfigFromOptions(opt check.Options) (*config, error) {
+	disableStreaming, err := check.GetBoolValue(opt, "disable_streaming")
+	if err != nil {
+		return nil, err
+	}
+	return &config{
+		disableStreaming: disableStreaming,
+	}, nil
+}
+
 func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) error {
 	log.SetFlags(0)
 	log.SetPrefix("strictrpc: ")
 
+	conf, err := newConfigFromOptions(r.Options())
+	if err != nil {
+		return err
+	}
+
 	for _, f := range r.Files() {
 		fd := f.FileDescriptor()
 
-		res := checkFile(fd)
+		res := checkFile(conf, fd)
 		if res != nil {
 			var annotations []check.AddAnnotationOption
 			if res.msg != "" {
+				res.msg = period(res.msg)
 				annotations = append(annotations, check.WithMessage(res.msg))
 				if DEBUG {
 					log.Println("DEBUG:", res.msg)
@@ -81,7 +96,17 @@ func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) erro
 	return nil
 }
 
-func checkFile(fd protoreflect.FileDescriptor) *result {
+func period(s string) string {
+	if len(s) > 0 {
+		r := []rune(s)
+		if r[len(s)-1] != '.' {
+			return s + "."
+		}
+	}
+	return s
+}
+
+func checkFile(conf *config, fd protoreflect.FileDescriptor) *result {
 	services := fd.Services()
 	switch n := services.Len(); {
 	case n == 0:
@@ -105,7 +130,7 @@ func checkFile(fd protoreflect.FileDescriptor) *result {
 	//    - as iterating, ensure they are in the correct order (request, response, error details), and
 	//      are in the same order as the method definitions within the service
 
-	if res := checkService(services.Get(0), streamingAllowed); res != nil {
+	if res := checkService(services.Get(0), conf.disableStreaming); res != nil {
 		return res
 	}
 	// TODO(mf): this is inefficient, because we're iterating over the methods twice
@@ -116,13 +141,13 @@ func checkFile(fd protoreflect.FileDescriptor) *result {
 
 func checkService(
 	sd protoreflect.ServiceDescriptor,
-	allowStreaming bool,
+	disableStreaming bool,
 ) *result {
 	methods := sd.Methods()
 	for i := range methods.Len() {
 		m := methods.Get(i)
-		if !allowStreaming && (m.IsStreamingClient() || m.IsStreamingServer()) {
-			return newResult(sd, "method %q is streaming, but streaming is not allowed", m.Name())
+		if disableStreaming && (m.IsStreamingClient() || m.IsStreamingServer()) {
+			return newResult(sd, "method %q uses streaming, which is disabled by the disable_streaming option.", m.Name())
 		}
 		for _, in := range []struct {
 			suffix string
@@ -148,9 +173,7 @@ func checkMessageSuffix(
 	messageName := string(message.Name())
 	_, remain, ok := strings.Cut(messageName, methodName)
 	if !ok || remain != suffix {
-		return newResult(message, "invalid %s message name %q, expecting %q",
-			strings.ToLower(suffix), messageName, methodName+suffix,
-		)
+		return newResult(message, "invalid %s message name %q, expecting %q", strings.ToLower(suffix), messageName, methodName+suffix)
 	}
 	return nil
 }
