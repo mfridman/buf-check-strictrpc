@@ -12,28 +12,22 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var DEBUG = os.Getenv("DEBUG") != ""
+const RuleID = "STRICT_RPC"
 
-var Spec = &check.Spec{
-	Rules: []*check.RuleSpec{
-		{
-			ID:      "STRICT_RPC",
-			Purpose: "An opinionated way to structure RPCs.",
-			Type:    check.RuleTypeLint,
-			Handler: check.RuleHandlerFunc(ruleFunc),
-			Default: true,
+var Rule = &check.RuleSpec{
+	ID:      RuleID,
+	Purpose: "Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns.",
+	Type:    check.RuleTypeLint,
+	Handler: check.RuleHandlerFunc(ruleFunc),
+	Default: false,
 
-			// TODO(mf): What should this be and when would I use it?
-			CategoryIDs:    nil,
-			ReplacementIDs: nil,
-			Deprecated:     false,
-		},
-	},
+	// TODO(mf): What should this be and when would I use it?
+	CategoryIDs:    nil,
+	Deprecated:     false,
+	ReplacementIDs: nil,
 }
 
-// TODO(mf): is there an opportunity for the [check] library to make it easier to use
-// check.ResponseWriter and accumulating results without having to pass down the writer to all the
-// places that need it?
+var Spec = &check.Spec{Rules: []*check.RuleSpec{Rule}}
 
 type result struct {
 	msg string
@@ -41,6 +35,12 @@ type result struct {
 }
 
 func newResult(fd protoreflect.Descriptor, msg string, args ...any) *result {
+	if len(args) == 0 {
+		return &result{
+			msg: msg,
+			fd:  fd,
+		}
+	}
 	return &result{
 		msg: fmt.Sprintf(msg, args...),
 		fd:  fd,
@@ -88,8 +88,8 @@ func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) erro
 			} else {
 				annotations = append(annotations, check.WithDescriptor(fd))
 			}
-			// TODO(mf): stop after accumulating N annotations? Need to see how this is displayed to the
-			// user in buf.
+			// TODO(mf): stop after accumulating N annotations? Need to see how this is displayed to
+			// the user in buf.
 			w.AddAnnotation(annotations...)
 		}
 	}
@@ -177,3 +177,5 @@ func checkMessageSuffix(
 	}
 	return nil
 }
+
+var DEBUG = os.Getenv("DEBUG") != ""
