@@ -80,6 +80,6 @@ func newRequest(dir string, files []string, options map[string]any) *checktest.R
 			FilePaths: files,
 		},
 		Options: options,
-		RuleIDs: []string{RuleID},
+		// RuleIDs: []string{RuleID}, // The plugin is set to default=true
 	}
 }

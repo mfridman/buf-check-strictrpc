@@ -19,9 +19,11 @@ var Rule = &check.RuleSpec{
 	Purpose: "Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns.",
 	Type:    check.RuleTypeLint,
 	Handler: check.RuleHandlerFunc(ruleFunc),
-	Default: false,
 
-	// TODO(mf): What should this be and when would I use it?
+	// TODO(mf): As an end-user, I'm not sure how to correctly use these fields. It feels like
+	// Buf-specific concepts are leaking. Would like some guidance on this. For example, if I'm
+	// writing a specific plugin, why wouldn't I want default to always be true?
+	Default:        true,
 	CategoryIDs:    nil,
 	Deprecated:     false,
 	ReplacementIDs: nil,
