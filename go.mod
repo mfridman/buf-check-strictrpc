@@ -3,7 +3,7 @@ module github.com/mfridman/buf-lint-strictrpc
 go 1.23.0
 
 require (
-	github.com/bufbuild/bufplugin-go v0.1.0
+	buf.build/go/bufplugin v0.2.0
 	google.golang.org/protobuf v1.34.2
 )
 

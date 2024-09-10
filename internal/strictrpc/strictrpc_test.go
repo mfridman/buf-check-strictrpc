@@ -3,7 +3,7 @@ package strictrpc
 import (
 	"testing"
 
-	"github.com/bufbuild/bufplugin-go/check/checktest"
+	"buf.build/go/bufplugin/check/checktest"
 )
 
 func TestRule(t *testing.T) {

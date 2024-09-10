@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bufbuild/bufplugin-go/check"
+	"buf.build/go/bufplugin/check"
 	"github.com/mfridman/buf-lint-strictrpc/internal/strictrpc"
 )
 
