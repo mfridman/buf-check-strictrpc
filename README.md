@@ -1,38 +1,47 @@
-# buf-lint-strictrpc
+# buf-check-strictrpc
 
-This repository contains a custom buf lint plugin for enforcing a specific set of lint rules when
-writing Protobuf RPCs, using frameworks like gRPC or [Connect](https://connectrpc.com/).
+This repository contains a custom `buf` check plugin designed to enforce a stricter set of lint
+rules for Protobuf RPCs, particularly when using frameworks like gRPC or
+[Connect](https://connectrpc.com).
 
-Some of this is already enforced by the buf linter, but we take it a step further:
+While the `buf` linter already enforces some of these rules, this plugin introduces additional
+constraints:
 
-1. A file with a Service definition must end with `_service.proto`.
-2. Within this file, there must be exactly one `service` definition, defined at the top.
-3. For every RPC method, there must be exactly two messages, starting with the method name and
+1. Files containing a service definition must have a filename ending with `_service.proto`.
+1. Each file can only contain one `service` definition, which must appear at the top before any
+   message definitions.
+1. For every RPC method, there must be exactly two associated messages, named after the method and
    suffixed with `Request` and `Response`.
-4. Optionally, a third message may exist and must be suffixed with `ErrorDetails`.
-5. The order of messages is based on the method definitions.
+1. Optionally, a third message may be present, which must be suffixed with `ErrorDetails`.
+1. Messages in the file must be listed in the same order as their corresponding RPC methods.
+
+### Options
+
+Useful plugin options to configure the plugin:
+
+| Option                 | Description                                                       | Default |
+| ---------------------- | ----------------------------------------------------------------- | ------- |
+| `disable_streaming`    | Disables streaming RPCs. (Some people just don't like em)         | `false` |
+| `allow_protobuf_empty` | Allows usage of `google.protobuf.Empty` in requests or responses. | `false` |
 
 ### Example
 
-Given a `user_service.proto` file:
+Given a `dragon_service.proto` file:
 
 ```proto
-service UserService {
-  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
-  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+service DragonService {
+  rpc GetDragon(GetDragonRequest) returns (GetDragonResponse) {}
+  rpc TrainDragon(TrainDragonRequest) returns (TrainDragonResponse) {}
 }
 
-message GetUserRequest {}
+message GetDragonRequest {}
 
-message GetUserResponse {}
+message GetDragonResponse {}
 
-// This message is optional.
-message GetUserErrorDetails {}
+message TrainDragonRequest {}
 
-message CreateUserRequest {}
-
-message CreateUserResponse {}
+message TrainDragonResponse {}
 
 // This message is optional.
-message CreateUserErrorDetails {}
+message TrainDragonErrorDetails {}
 ```

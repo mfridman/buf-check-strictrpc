@@ -5,6 +5,4 @@ import (
 	"github.com/mfridman/buf-lint-strictrpc/internal/strictrpc"
 )
 
-func main() {
-	check.Main(strictrpc.Spec)
-}
+func main() { check.Main(strictrpc.Spec) }

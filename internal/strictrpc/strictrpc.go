@@ -22,7 +22,7 @@ var Rule = &check.RuleSpec{
 
 	// TODO(mf): As an end-user, I'm not sure how to correctly use these fields. It feels like
 	// Buf-specific concepts are leaking. Would like some guidance on this. For example, if I'm
-	// writing a specific plugin, why wouldn't I want default to always be true?
+	// writing a specific plugin, why wouldn't default always be true?
 	Default:        true,
 	CategoryIDs:    nil,
 	Deprecated:     false,
@@ -50,7 +50,8 @@ func newResult(fd protoreflect.Descriptor, msg string, args ...any) *result {
 }
 
 type config struct {
-	disableStreaming bool
+	disableStreaming   bool
+	allowProtobufEmpty bool
 }
 
 func newConfigFromOptions(opt check.Options) (*config, error) {
@@ -58,8 +59,13 @@ func newConfigFromOptions(opt check.Options) (*config, error) {
 	if err != nil {
 		return nil, err
 	}
+	allowProtobufEmpty, err := check.GetBoolValue(opt, "allow_protobuf_empty")
+	if err != nil {
+		return nil, err
+	}
 	return &config{
-		disableStreaming: disableStreaming,
+		disableStreaming:   disableStreaming,
+		allowProtobufEmpty: allowProtobufEmpty,
 	}, nil
 }
 
@@ -75,18 +81,18 @@ func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) erro
 	for _, f := range r.Files() {
 		fd := f.FileDescriptor()
 
-		res := checkFile(conf, fd)
-		if res != nil {
+		result := checkFile(conf, fd)
+		if result != nil {
 			var annotations []check.AddAnnotationOption
-			if res.msg != "" {
-				res.msg = period(res.msg)
-				annotations = append(annotations, check.WithMessage(res.msg))
+			if result.msg != "" {
+				result.msg = period(result.msg)
 				if DEBUG {
-					log.Println("DEBUG:", res.msg)
+					log.Println("DEBUG:", result.msg)
 				}
+				annotations = append(annotations, check.WithMessage(result.msg))
 			}
-			if res.fd != nil {
-				annotations = append(annotations, check.WithDescriptor(res.fd))
+			if result.fd != nil {
+				annotations = append(annotations, check.WithDescriptor(result.fd))
 			} else {
 				annotations = append(annotations, check.WithDescriptor(fd))
 			}
@@ -98,25 +104,24 @@ func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) erro
 	return nil
 }
 
+// period adds a period to the end of a string if it doesn't already have one.
 func period(s string) string {
-	if len(s) > 0 {
-		r := []rune(s)
-		if r[len(s)-1] != '.' {
-			return s + "."
-		}
-	}
-	return s
+	return strings.TrimSuffix(s, ".") + "."
 }
 
 func checkFile(conf *config, fd protoreflect.FileDescriptor) *result {
+	filename := strings.TrimSuffix(filepath.Base(fd.Path()), ".proto")
 	services := fd.Services()
 	switch n := services.Len(); {
 	case n == 0:
-		// No services. No problem.
+		// No services. No problem, except if a file ends with _service.proto but does not have a
+		// service. No good.
+		if strings.HasSuffix(filename, "_service") {
+			return newResult(fd, "file %q does not have a service, but ends with _service.proto", filename)
+		}
 		return nil
 	case n == 1:
 		// Okay. Exactly one service.
-		filename := strings.TrimSuffix(filepath.Base(fd.Path()), ".proto")
 		if !strings.HasSuffix(filename, "_service") {
 			return newResult(fd, "service %q must end with _service.proto", filename)
 		}
