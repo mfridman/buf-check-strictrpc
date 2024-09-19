@@ -1,4 +1,4 @@
-# buf-check-strictrpc
+# buf-check-strictrpc [![Actions](https://github.com/mfridman/buf-check-strictrpc/workflows/CI/badge.svg)](https://github.com/mfridman/buf-check-strictrpc) [![Go Report Card](https://goreportcard.com/badge/github.com/mfridman/buf-check-strictrpc)](https://goreportcard.com/report/github.com/mfridman/buf-check-strictrpc)
 
 This repository contains a custom `buf` check plugin designed to enforce a stricter set of lint
 rules for Protobuf RPCs, particularly when using frameworks like gRPC or
