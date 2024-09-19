@@ -45,3 +45,58 @@ message TrainDragonResponse {}
 // This message is optional.
 message TrainDragonErrorDetails {}
 ```
+
+### Preparing a WASM binary
+
+Compile the Go plugin to a WASM binary:
+
+```shell
+GOOS=wasip1 GOARCH=wasm go build -o buf-check-strictrpc.wasm main.go
+```
+
+Let's try it out!
+
+```shell
+wasmtime buf-check-strictrpc.wasm --help
+
+Usage of plugin:
+      --format string   The format to use for requests, responses, and specs. Must be one of ["binary", "json"]. (default "binary")
+      --protocol        Print the protocol to stdout and exit.
+      --spec            Print the spec to stdout in the specified format and exit.
+```
+
+Neat, let's see what the protocol looks like:
+
+```shell
+wasmtime buf-check-strictrpc.wasm --protocol
+1
+```
+
+Okay, now let's try something more interesting, what does the spec look like?
+
+```shell
+wasmtime buf-check-strictrpc.wasm --spec --format=json | jq
+
+{
+  "procedures": [
+    {
+      "path": "/buf.plugin.check.v1.CheckService/Check",
+      "args": [
+        "check"
+      ]
+    },
+    {
+      "path": "/buf.plugin.check.v1.CheckService/ListRules",
+      "args": [
+        "list-rules"
+      ]
+    },
+    {
+      "path": "/buf.plugin.check.v1.CheckService/ListCategories",
+      "args": [
+        "list-categories"
+      ]
+    }
+  ]
+}
+```
