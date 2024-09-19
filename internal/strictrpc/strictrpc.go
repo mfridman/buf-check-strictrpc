@@ -32,20 +32,20 @@ var Rule = &check.RuleSpec{
 var Spec = &check.Spec{Rules: []*check.RuleSpec{Rule}}
 
 type result struct {
-	msg string
-	fd  protoreflect.Descriptor
+	msg  string
+	desc protoreflect.Descriptor
 }
 
-func newResult(fd protoreflect.Descriptor, msg string, args ...any) *result {
+func newResultf(desc protoreflect.Descriptor, msg string, args ...any) *result {
 	if len(args) == 0 {
 		return &result{
-			msg: msg,
-			fd:  fd,
+			msg:  msg,
+			desc: desc,
 		}
 	}
 	return &result{
-		msg: fmt.Sprintf(msg, args...),
-		fd:  fd,
+		msg:  fmt.Sprintf(msg, args...),
+		desc: desc,
 	}
 }
 
@@ -91,8 +91,8 @@ func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) erro
 				}
 				annotations = append(annotations, check.WithMessage(result.msg))
 			}
-			if result.fd != nil {
-				annotations = append(annotations, check.WithDescriptor(result.fd))
+			if result.desc != nil {
+				annotations = append(annotations, check.WithDescriptor(result.desc))
 			} else {
 				annotations = append(annotations, check.WithDescriptor(fd))
 			}
@@ -117,16 +117,16 @@ func checkFile(conf *config, fd protoreflect.FileDescriptor) *result {
 		// No services. No problem, except if a file ends with _service.proto but does not have a
 		// service. No good.
 		if strings.HasSuffix(filename, "_service") {
-			return newResult(fd, "file %q does not have a service, but ends with _service.proto", filename)
+			return newResultf(fd, "file %q does not have a service, but ends with _service.proto", filename)
 		}
 		return nil
 	case n == 1:
 		// Okay. Exactly one service.
 		if !strings.HasSuffix(filename, "_service") {
-			return newResult(fd, "service %q must end with _service.proto", filename)
+			return newResultf(fd, "service %q must end with _service.proto", filename)
 		}
 	default:
-		return newResult(fd, fmt.Sprintf("only one service definition allowed per file, but %d were found", n))
+		return newResultf(fd, fmt.Sprintf("only one service definition allowed per file, but %d were found", n))
 	}
 	// TODO:
 	//  - iterate over methods, make sure they have Request/Response suffixes (duplicate)
@@ -154,7 +154,7 @@ func checkService(
 	for i := range methods.Len() {
 		m := methods.Get(i)
 		if disableStreaming && (m.IsStreamingClient() || m.IsStreamingServer()) {
-			return newResult(sd, "method %q uses streaming, which is disabled by the disable_streaming option.", m.Name())
+			return newResultf(sd, "method %q uses streaming, which is disabled by the disable_streaming option.", m.Name())
 		}
 		for _, in := range []struct {
 			suffix string
@@ -180,7 +180,7 @@ func checkMessageSuffix(
 	messageName := string(message.Name())
 	_, remain, ok := strings.Cut(messageName, methodName)
 	if !ok || remain != suffix {
-		return newResult(message, "invalid %s message name %q, expecting %q", strings.ToLower(suffix), messageName, methodName+suffix)
+		return newResultf(message, "invalid %s message name %q, expecting %q", strings.ToLower(suffix), messageName, methodName+suffix)
 	}
 	return nil
 }
