@@ -4,4 +4,34 @@ lint:
   use:
     - STRICT_RPC
 plugins:
+  # curl https://wasmtime.dev/install.sh -sSf | bash
+  # 1.65 seconds
   - plugin: [wasmtime, ./examples/buf-check-strictrpc.wasm]
+
+  # curl https://get.wasmer.io -sSfL | sh
+  # 0.90s
+  # - plugin: [wasmer, run, --, ./examples/buf-check-strictrpc.wasm]
+
+  # go install github.com/tetratelabs/wazero/cmd/wazero@latest
+  # 28.91s
+  # - plugin: [wazero, run, ./examples/buf-check-strictrpc.wasm]
+  #
+  # Wtf? Let's try to compile it first and cache the compiled result.
+  # wazero compile -cachedir=./cache/wazero examples/buf-check-strictrpc.wasm
+  # 3.20s
+  # - plugin: [wazero, run, -cachedir, ./cache/wazero, ./examples/buf-check-strictrpc.wasm]
+  # 1.43s
+  # Phew, much better.
+
+  # brew install oven-sh/bun/bun
+  #
+  # RuntimeError: Out of bounds memory access
+  #     at <?>.wasm-function[runtime.morestack]
+  #     at <?>.wasm-function[runtime.morestack_noctxt]
+  #     at <?>.wasm-function[runtime.readTimeRandom]
+  #     at <?>.wasm-function[runtime.randinit]
+  #     at <?>.wasm-function[runtime.schedinit]
+  #     at <?>.wasm-function[runtime.rt0_go]
+  #     at <?>.wasm-function[_rt0_wasm_wasip1]
+  #     at start (node:wasi:1030:12)
+  # - plugin: [bun, ./examples/buf-check-strictrpc.wasm]
