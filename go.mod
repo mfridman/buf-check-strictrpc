@@ -1,4 +1,4 @@
-module github.com/mfridman/buf-lint-strictrpc
+module github.com/mfridman/buf-check-strictrpc
 
 go 1.23.0
 
