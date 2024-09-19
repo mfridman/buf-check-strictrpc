@@ -4,8 +4,7 @@ This repository contains a custom `buf` check plugin designed to enforce a stric
 rules for Protobuf RPCs, particularly when using frameworks like gRPC or
 [Connect](https://connectrpc.com).
 
-While the `buf` linter already enforces some of these rules, this plugin introduces additional
-constraints:
+While the `buf` linter enforces some `RPC_` rules, this plugin introduces additional constraints:
 
 1. Files containing a service definition must have a filename ending with `_service.proto`.
 1. Each file can only contain one `service` definition, which must appear at the top before any
@@ -15,14 +14,14 @@ constraints:
 1. Optionally, a third message may be present, which must be suffixed with `ErrorDetails`.
 1. Messages in the file must be listed in the same order as their corresponding RPC methods.
 
-### Options
+### Plugin options
 
-Useful plugin options to configure the plugin:
+Useful options to configure the plugin:
 
-| Option                 | Description                                                       | Default |
-| ---------------------- | ----------------------------------------------------------------- | ------- |
-| `disable_streaming`    | Disables streaming RPCs. (Some people just don't like em)         | `false` |
-| `allow_protobuf_empty` | Allows usage of `google.protobuf.Empty` in requests or responses. | `false` |
+| Option                 | Default | Description                                                       |
+| ---------------------- | ------- | ----------------------------------------------------------------- |
+| `disable_streaming`    | `false` | Disables streaming RPCs. (Some people just don't like em)         |
+| `allow_protobuf_empty` | `false` | Allows usage of `google.protobuf.Empty` in requests or responses. |
 
 ### Example
 
