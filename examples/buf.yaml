@@ -1,0 +1,7 @@
+# buf.yaml
+version: v2
+lint:
+  use:
+    - STRICT_RPC
+plugins:
+  - plugin: [wasmtime, ./examples/buf-check-strictrpc.wasm]

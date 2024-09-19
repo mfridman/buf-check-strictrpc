@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+service DragonService {
+  rpc GetDragon(GetDragonRequest) returns (GetDragonResponse) {}
+  rpc TrainDragon(TrainDragonRequest) returns (TrainDragonResponse) {}
+}
+
+message GetDragonRequest {}
+
+message GetDragonResponse {}
+
+message TrainDragonRequest {}
+
+message TrainDragonResponse {}
+
+// This message is optional.
+message TrainDragonErrorDetails {}

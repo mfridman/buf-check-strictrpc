@@ -50,13 +50,13 @@ message TrainDragonErrorDetails {}
 
 Compile the Go plugin to a WASM binary:
 
-```shell
+```bash
 GOOS=wasip1 GOARCH=wasm go build -o buf-check-strictrpc.wasm main.go
 ```
 
 Let's try it out!
 
-```shell
+```bash
 wasmtime buf-check-strictrpc.wasm --help
 
 Usage of plugin:
@@ -67,36 +67,46 @@ Usage of plugin:
 
 Neat, let's see what the protocol looks like:
 
-```shell
+```bash
 wasmtime buf-check-strictrpc.wasm --protocol
 1
 ```
 
 Okay, now let's try something more interesting, what does the spec look like?
 
-```shell
+```bash
 wasmtime buf-check-strictrpc.wasm --spec --format=json | jq
+```
 
+Output:
+
+```json
 {
   "procedures": [
     {
       "path": "/buf.plugin.check.v1.CheckService/Check",
-      "args": [
-        "check"
-      ]
+      "args": ["check"]
     },
     {
       "path": "/buf.plugin.check.v1.CheckService/ListRules",
-      "args": [
-        "list-rules"
-      ]
+      "args": ["list-rules"]
     },
     {
       "path": "/buf.plugin.check.v1.CheckService/ListCategories",
-      "args": [
-        "list-categories"
-      ]
+      "args": ["list-categories"]
     }
   ]
 }
 ```
+
+### Using the WASM binary with `buf`
+
+We could compile the plugin to normal Go binary, but what's the fun in that? So let's use wasmtime
+to run the WASM binary:
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -o ./examples/buf-check-strictrpc.wasm main.go
+buf lint ./examples/dragon.proto
+```
+
+Make sure you're using the latest version of `buf`!
