@@ -99,14 +99,16 @@ Output:
 }
 ```
 
-### Using the WASM binary with `buf`
+### Using WASM binary with `buf`
 
 We could compile the plugin to normal Go binary, but what's the fun in that? So let's use wasmtime
 to run the WASM binary:
 
 ```bash
 GOOS=wasip1 GOARCH=wasm go build -o ./examples/buf-check-strictrpc.wasm main.go
+
 buf lint ./examples/dragon.proto
+examples/dragon.proto:1:1:service "dragon" must end with _service.proto. (wasmtime ./examples/buf-check-strictrpc.wasm)
 ```
 
-Make sure you're using the latest version of `buf`!
+Yikes, we forgot to add the `_service.proto` suffix to our file!
