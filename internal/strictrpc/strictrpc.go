@@ -142,60 +142,10 @@ func checkFile(conf *config, fileDesc protoreflect.FileDescriptor) *result {
 	}
 	serviceDesc := services.Get(0)
 
-	if fileDesc.Messages().Len() == 0 {
-		// TODO(mf): do we want to surface an error here, maybe only if allowProtobufEmpty is true? // TODO(mf): this is a crude implementation, but we should be able to do this in one pass. // TODO(mf): this is a crude implementation, but we should be able to do this in one pass.
-		return nil
-	}
-
 	if res := checkService(serviceDesc, conf.disableStreaming); res != nil {
 		return res
 	}
 
-	// TODO(mf): this is a crude implementation, but we should be able to do this in one pass.
-
-	methods := make([]string, 0, serviceDesc.Methods().Len())
-	for i := range serviceDesc.Methods().Len() {
-		methods = append(methods, string(serviceDesc.Methods().Get(i).Name()))
-	}
-	log.Println(methods)
-	if res := isValidInput(fileDesc.Messages(), methods); res != nil {
-		return res
-	}
-
-	return nil
-}
-
-func isValidInput(messages protoreflect.MessageDescriptors, input []string) *result {
-	var inputIndex int
-	for i := range messages.Len() {
-		msg := messages.Get(i)
-		msgName := string(msg.Name())
-
-		// Check for mandatory 1 and 2 suffixes
-		if inputIndex+1 >= len(input) {
-			return newResultf(msg, "missing %s", msgName+"Request")
-		}
-		if input[inputIndex]+"Request" != msgName {
-			return newResultf(msg, "expected %s, got %s", msgName, input[inputIndex]+"Request")
-		}
-		if input[inputIndex+1]+"Response" != msgName {
-			return newResultf(msg, "expected %s, got %s", msgName+"Response", input[inputIndex+1])
-		}
-		inputIndex += 2
-
-		// Check for optional 3 suffix
-		if inputIndex < len(input) {
-			current := input[inputIndex]
-			if current+"ErrorDetails" != msgName {
-				return newResultf(msg, "expected %s, got %s", msgName+"ErrorDetails", current)
-			}
-			inputIndex++
-		}
-	}
-	// Ensure we've processed all input
-	if inputIndex != len(input) {
-		return newResultf(messages.Get(0), "unexpected input %q", input[inputIndex])
-	}
 	return nil
 }
 
