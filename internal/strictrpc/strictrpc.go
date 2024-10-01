@@ -9,14 +9,28 @@ import (
 	"strings"
 
 	"buf.build/go/bufplugin/check"
+	"buf.build/go/bufplugin/info"
+	"buf.build/go/bufplugin/option"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+var Spec = &check.Spec{
+	Rules: []*check.RuleSpec{Rule},
+	Info: &info.Spec{
+		URL:           "https://github.com/mfridman/buf-check-strictrpc",
+		SPDXLicenseID: "MIT",
+		LicenseURL:    "https://github.com/mfridman/buf-check-strictrpc/blob/main/LICENSE",
+		DocShort:      docShort,
+	},
+}
+
+var docShort = "Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns."
 
 const RuleID = "STRICT_RPC"
 
 var Rule = &check.RuleSpec{
 	ID:      RuleID,
-	Purpose: "Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns.",
+	Purpose: "Ensures that RPCs are defined in a strict manner.",
 	Type:    check.RuleTypeLint,
 	Handler: check.RuleHandlerFunc(ruleFunc),
 
@@ -28,8 +42,6 @@ var Rule = &check.RuleSpec{
 	Deprecated:     false,
 	ReplacementIDs: nil,
 }
-
-var Spec = &check.Spec{Rules: []*check.RuleSpec{Rule}}
 
 type result struct {
 	msg  string
@@ -54,12 +66,12 @@ type config struct {
 	allowProtobufEmpty bool
 }
 
-func newConfigFromOptions(opt check.Options) (*config, error) {
-	disableStreaming, err := check.GetBoolValue(opt, "disable_streaming")
+func newConfigFromOptions(opt option.Options) (*config, error) {
+	disableStreaming, err := option.GetBoolValue(opt, "disable_streaming")
 	if err != nil {
 		return nil, err
 	}
-	allowProtobufEmpty, err := check.GetBoolValue(opt, "allow_protobuf_empty")
+	allowProtobufEmpty, err := option.GetBoolValue(opt, "allow_protobuf_empty")
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +90,8 @@ func ruleFunc(ctx context.Context, w check.ResponseWriter, r check.Request) erro
 		return err
 	}
 
-	for _, f := range r.Files() {
-		fd := f.FileDescriptor()
+	for _, f := range r.FileDescriptors() {
+		fd := f.ProtoreflectFileDescriptor()
 
 		result := checkFile(conf, fd)
 		if result != nil {
@@ -109,52 +121,93 @@ func period(s string) string {
 	return strings.TrimSuffix(s, ".") + "."
 }
 
-func checkFile(conf *config, fd protoreflect.FileDescriptor) *result {
-	filename := strings.TrimSuffix(filepath.Base(fd.Path()), ".proto")
-	services := fd.Services()
+func checkFile(conf *config, fileDesc protoreflect.FileDescriptor) *result {
+	filename := strings.TrimSuffix(filepath.Base(fileDesc.Path()), ".proto")
+	services := fileDesc.Services()
 	switch n := services.Len(); {
 	case n == 0:
 		// No services. No problem, except if a file ends with _service.proto but does not have a
 		// service. No good.
 		if strings.HasSuffix(filename, "_service") {
-			return newResultf(fd, "file %q does not have a service, but ends with _service.proto", filename)
+			return newResultf(fileDesc, "file %q does not have a service, but ends with _service.proto", filename)
 		}
 		return nil
 	case n == 1:
 		// Okay. Exactly one service.
 		if !strings.HasSuffix(filename, "_service") {
-			return newResultf(fd, "service %q must end with _service.proto", filename)
+			return newResultf(fileDesc, "service %q must end with _service.proto", filename)
 		}
 	default:
-		return newResultf(fd, fmt.Sprintf("only one service definition allowed per file, but %d were found", n))
+		return newResultf(fileDesc, "only one service definition allowed per file, but %d were found", n)
 	}
-	// TODO:
-	//  - iterate over methods, make sure they have Request/Response suffixes (duplicate)
-	//  - iterate over all the messages, making sure there are exactly 2 or 3 messages per method:
-	//    - request
-	//    - response
-	//    - optional, allow 1 ErrorDetails per method
-	//    - as iterating, ensure they are in the correct order (request, response, error details), and
-	//      are in the same order as the method definitions within the service
+	serviceDesc := services.Get(0)
 
-	if res := checkService(services.Get(0), conf.disableStreaming); res != nil {
+	if fileDesc.Messages().Len() == 0 {
+		// TODO(mf): do we want to surface an error here, maybe only if allowProtobufEmpty is true? // TODO(mf): this is a crude implementation, but we should be able to do this in one pass. // TODO(mf): this is a crude implementation, but we should be able to do this in one pass.
+		return nil
+	}
+
+	if res := checkService(serviceDesc, conf.disableStreaming); res != nil {
 		return res
 	}
-	// TODO(mf): this is inefficient, because we're iterating over the methods twice
-	_ = fd.Messages()
+
+	// TODO(mf): this is a crude implementation, but we should be able to do this in one pass.
+
+	methods := make([]string, 0, serviceDesc.Methods().Len())
+	for i := range serviceDesc.Methods().Len() {
+		methods = append(methods, string(serviceDesc.Methods().Get(i).Name()))
+	}
+	log.Println(methods)
+	if res := isValidInput(fileDesc.Messages(), methods); res != nil {
+		return res
+	}
 
 	return nil
 }
 
+func isValidInput(messages protoreflect.MessageDescriptors, input []string) *result {
+	var inputIndex int
+	for i := range messages.Len() {
+		msg := messages.Get(i)
+		msgName := string(msg.Name())
+
+		// Check for mandatory 1 and 2 suffixes
+		if inputIndex+1 >= len(input) {
+			return newResultf(msg, "missing %s", msgName+"Request")
+		}
+		if input[inputIndex]+"Request" != msgName {
+			return newResultf(msg, "expected %s, got %s", msgName, input[inputIndex]+"Request")
+		}
+		if input[inputIndex+1]+"Response" != msgName {
+			return newResultf(msg, "expected %s, got %s", msgName+"Response", input[inputIndex+1])
+		}
+		inputIndex += 2
+
+		// Check for optional 3 suffix
+		if inputIndex < len(input) {
+			current := input[inputIndex]
+			if current+"ErrorDetails" != msgName {
+				return newResultf(msg, "expected %s, got %s", msgName+"ErrorDetails", current)
+			}
+			inputIndex++
+		}
+	}
+	// Ensure we've processed all input
+	if inputIndex != len(input) {
+		return newResultf(messages.Get(0), "unexpected input %q", input[inputIndex])
+	}
+	return nil
+}
+
 func checkService(
-	sd protoreflect.ServiceDescriptor,
+	serviceDesc protoreflect.ServiceDescriptor,
 	disableStreaming bool,
 ) *result {
-	methods := sd.Methods()
+	methods := serviceDesc.Methods()
 	for i := range methods.Len() {
 		m := methods.Get(i)
 		if disableStreaming && (m.IsStreamingClient() || m.IsStreamingServer()) {
-			return newResultf(sd, "method %q uses streaming, which is disabled by the disable_streaming option.", m.Name())
+			return newResultf(serviceDesc, "method %q uses streaming, which is disabled by the disable_streaming option.", m.Name())
 		}
 		for _, in := range []struct {
 			suffix string

@@ -18,7 +18,7 @@ func TestRule(t *testing.T) {
 		want := checktest.ExpectedAnnotation{
 			RuleID:  RuleID,
 			Message: "only one service definition allowed per file, but 2 were found.",
-			Location: &checktest.ExpectedLocation{
+			FileLocation: &checktest.ExpectedFileLocation{
 				FileName: "many_services.proto",
 			},
 		}
@@ -43,7 +43,7 @@ func TestRule(t *testing.T) {
 			want := checktest.ExpectedAnnotation{
 				RuleID:  RuleID,
 				Message: `method "GetMovie" uses streaming, which is disabled by the disable_streaming option.`,
-				Location: &checktest.ExpectedLocation{
+				FileLocation: &checktest.ExpectedFileLocation{
 					FileName:    "a_service.proto",
 					StartLine:   2,
 					EndLine:     4,
