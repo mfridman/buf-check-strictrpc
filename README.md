@@ -58,10 +58,21 @@ Let's try it out!
 ```bash
 wasmtime buf-check-strictrpc.wasm --help
 
-Usage of plugin:
+Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns.
+
+Commands:
+
+  check
+  info
+  list-categories
+  list-rules
+
+Flags:
+
       --format string   The format to use for requests, responses, and specs. Must be one of ["binary", "json"]. (default "binary")
       --protocol        Print the protocol to stdout and exit.
       --spec            Print the spec to stdout in the specified format and exit.
+  -h, --help            Show this help.
 ```
 
 Neat, let's see what the protocol looks like:
@@ -93,6 +104,10 @@ Output:
     {
       "path": "/buf.plugin.check.v1.CheckService/ListCategories",
       "args": ["list-categories"]
+    },
+    {
+      "path": "/buf.plugin.info.v1.PluginInfoService/GetPluginInfo",
+      "args": ["info"]
     }
   ]
 }
