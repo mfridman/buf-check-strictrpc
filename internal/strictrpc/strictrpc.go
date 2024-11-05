@@ -17,14 +17,11 @@ import (
 var Spec = &check.Spec{
 	Rules: []*check.RuleSpec{Rule},
 	Info: &info.Spec{
-		URL:           "https://github.com/mfridman/buf-check-strictrpc",
 		SPDXLicenseID: "MIT",
 		LicenseURL:    "https://github.com/mfridman/buf-check-strictrpc/blob/main/LICENSE",
-		DocShort:      docShort,
+		Documentation: `Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns.`,
 	},
 }
-
-var docShort = "Enforces an opinionated structure for RPC definitions, including strict file naming, single-service per file, and consistent request/response message naming patterns."
 
 const RuleID = "STRICT_RPC"
 
